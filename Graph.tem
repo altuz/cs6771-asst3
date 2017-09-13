@@ -1,0 +1,6 @@
+// shared ptr
+// std::vector<std::shared_ptr<N>> nodes;
+// weak ptr for key
+// std::unordered_map<std::weak_ptr<N>, Edges> edges;
+
+

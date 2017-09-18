@@ -2,5 +2,45 @@
 // std::vector<std::shared_ptr<N>> nodes;
 // weak ptr for key
 // std::unordered_map<std::weak_ptr<N>, Edges> edges;
+template <typename N, typename E> Graph<N, E>::Graph() : nodes{}, edges{} {}
 
+template <typename N, typename E> bool Graph<N, E>::addNode(const N &val) {
+    // try to find val
+    auto res = findNode(val);
+    // emplace val into nodes if not found
+    auto found = (res != this->nodes.cend());
+    if (!found){
+        std::shared_ptr<N> node{new E{val}};
+        this->nodes.push_back(node);
+    }
+    return found;
+}
 
+template <typename N, typename E> bool Graph<N, E>::addEdge(const N &src, const N &dest, const E &weight) {
+    auto source = findNode(src), destination = findNode(dest);
+    if(source == this->nodes.cend() || destination == this->nodes.cend()){
+        // TODO:
+    }
+    Edge<N, E> edge{*source, *destination, weight};
+    auto location = findEdge(edge);
+    auto found = (location != this->edges.cend());
+    if(!found){
+        this->edges.push_back(edge);
+    }
+    return false;
+}
+
+template <typename N, typename E> typename std::vector<std::shared_ptr<N>>::const_iterator Graph<N, E>::findNode(const N &node) {
+    // find iterator containing node
+    auto res = std::find_if(this->nodes.cbegin(), this->nodes.cend(), [node](auto &sp) {
+        return *(sp) == node;
+    });
+    return res;
+}
+
+template <typename N, typename E> typename std::vector<Edge<N, E>>::const_iterator Graph<N, E>::findEdge(const Edge<N, E> &edge){
+    for(auto i = 0u; i < edges.size(); ++i){
+        if(edges[i] == edge) return (edges.cbegin() + i);
+    }
+    return edges.cend();
+}

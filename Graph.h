@@ -8,63 +8,58 @@
 #include <iostream>
 
 namespace gdwg {
+    // Edge interface
+    // Denotes an edge in Graph
+    // Edge contains an outgoing link connecting the node it is stored in
+    // to a destination node
+    // Destination is a weak pointer
     template <typename N, typename E> class Edge{
     private:
         std::weak_ptr<N> _dest;
-        // unique ptr
         E _weight;
-
     public:
-        Edge(std::weak_ptr<N> dest, E weight) : _dest{dest}, _weight{weight}{};
-        bool isEqual(const N &dest, const E &weight);
+        // Constructors
+        Edge(std::weak_ptr<N> dest, E weight);
+        // Assignment operators
+        Edge<N, E> &operator=(const Edge<N, E> &rhs);
+        // Getter functions
         E getWeight() const;
         std::weak_ptr<N> getDest() const;
-        void setWeight(E &weight);
+        // Setter
         void setDest(std::weak_ptr<N> &dest);
-        Edge<N, E> &operator=(const Edge<N, E> &rhs) {
-            this->_dest = rhs._dest;
-            this->_weight = rhs._weight;
-            return *this;
-        }
+        // Compare edge with values
+        bool isEqual(const N &dest, const E &weight);
     };
-
+    // Node interface
+    // Contains a list of edges
     template <typename N, typename E> class Node{
     private:
         std::shared_ptr<N> _node;
         std::list<Edge<N, E>> _outgoing;
+        typename std::list<Edge<N, E>>::iterator findEdge(const N &dst, const E &wgt);
 
     public:
-        // ‘{anonymous}::Node<int, int>& {anonymous}::Node<int, int>::operator=(const {anonymous}::Node<int, int>&)’
-        Node(const N node) : Node() {
-            this->_node = std::make_shared<N>(node);
-        };
-        Node() = default;
-        Node(const Node<N, E> &cpy) = default;
-        Node(Node<N, E> &&target) = default;
+        // Constructors
+        Node(const N node);
+        // Assignment operators
+        Node<N, E> &operator=(const Node<N, E> &rhs);
+        // Getter functions
         int getDegree() const;
         std::weak_ptr<N> getNode() const;
+        std::list<Edge<N, E>> getEdges() const;
+        // Node modifying functions
+        bool addEdge(const std::weak_ptr<N> &dst, const E &wgt);
         bool isConnected(const N &dst) const;
-        void addEdge(const std::weak_ptr<N> &dst, const E &wgt);
-        void printEdges() const;
         void deleteEdge(const N &dest, const E &weight) noexcept;
         void mergeReplace(const N &old, std::weak_ptr<N> &replacement);
         void merge(const Node<N, E> &old);
         void invalidateEdges();
-        std::list<Edge<N, E>> getEdges() const;
-
-        Node<N, E> &operator=(const Node<N, E> &rhs){
-            this->_node = rhs._node;
-            this->_outgoing = rhs._outgoing;
-            return *this;
-        };
-
-        typename std::list<Edge<N, E>>::iterator findEdge(const N &dst, const E &wgt);
-        typename std::list<Edge<N, E>>::iterator edgeEnd();
+        // Miscellaneous functions
+        void printEdges() const;
     };
-
-
+    // Main Graph interface
+    // Graph contains a list of nodes
     template <typename N, typename E> class Graph{
-        // members
     private:
         std::list<Node<N, E>> _nodes;
         mutable typename std::list<Node<N, E>>::const_iterator _fake_iter;
@@ -72,12 +67,15 @@ namespace gdwg {
         typename std::list<Node<N, E>>::iterator findNode(const N &val);
         typename std::list<Node<N, E>>::const_iterator findNode(const N &val) const;
     public:
+        // Constructors
+        // default move seems to work fine for the given test case
         Graph() = default;
         Graph(const Graph<N, E> &source);
         Graph(Graph<N, E> &&source) = default;
-
+        // Assignment operators
         Graph<N, E> &operator=(const Graph<N, E> &rhs);
         Graph<N, E> &operator=(Graph<N, E> &&rhs);
+        // Graph modifications
         bool addNode(const N &val);
         bool addEdge(const N &src, const N &dest, const E &weight);
         bool replace(const N &old, const N &replacement);
@@ -85,10 +83,13 @@ namespace gdwg {
         void deleteNode(const N &target) noexcept;
         void deleteEdge(const N &src, const N &dest, const E &weight) noexcept;
         void clear() noexcept;
+        // Unary functions
         bool isNode(const N &val) const;
         bool isConnected(const N &src, const N &dest) const;
+        // Non modifying functions
         void printNodes() const;
         void printEdges(const N& val) const;
+        // Fake iterator
         void begin() const;
         void next() const;
         bool end() const;
@@ -97,6 +98,18 @@ namespace gdwg {
     //////////////////////////
     // Node class functions //
     //////////////////////////
+    // Constructor for node
+    template <typename N, typename E>
+    Node<N, E>::Node(const N node) {
+        this->_node = std::make_shared<N>(node);
+    };
+    // Assignment operator for node
+    template <typename N, typename E>
+    Node<N, E> &Node<N, E>::operator=(const Node<N, E> &rhs){
+        this->_node = rhs._node;
+        this->_outgoing = rhs._outgoing;
+        return *this;
+    };
     // Returns the number of outgoing edges
     template <typename N, typename E>
     int Node<N, E>::getDegree() const{
@@ -111,7 +124,8 @@ namespace gdwg {
     template <typename N, typename E>
     bool operator<(const Node<N, E> &lhs, const Node<N, E> &rhs){
         auto l_deg = lhs.getDegree(), r_deg = rhs.getDegree();
-        if(l_deg == r_deg) return (*(lhs.getNode().lock()) < *(rhs.getNode().lock()));
+        if(l_deg == r_deg)
+            return (*(lhs.getNode().lock()) < *(rhs.getNode().lock()));
         return l_deg < r_deg;
     }
     // Prints all the edges in current node
@@ -124,7 +138,6 @@ namespace gdwg {
             return;
         }
         cpy.sort();
-        // std::sort(cpy.begin(), cpy.end());
         for(auto i : cpy) {
             std::cout << *(i.getDest().lock()) << " " << i.getWeight() << "\n";
         }
@@ -139,6 +152,7 @@ namespace gdwg {
         return false;
     }
     // Find an outgoing edge from a node
+    // Returns an iterator
     template <typename N, typename E>
     typename std::list<Edge<N, E>>::iterator Node<N, E>::findEdge(const N &dst, const E &wgt) {
         // find iterator containing node
@@ -149,16 +163,17 @@ namespace gdwg {
         );
         return res;
     }
-    // Finds a specific edge in a graph and return the iterator
+    // Adds an edge between this node and dest
+    // Precondition, duplicate checking already handled
     template <typename N, typename E>
-    void Node<N, E>::addEdge(const std::weak_ptr<N> &dst, const E &wgt){
-        Edge<N, E> new_edge{dst, wgt};
-        this->_outgoing.push_back(new_edge);
-    }
-    // Returns the end of iterator
-    template <typename N, typename E>
-    typename std::list<Edge<N, E>>::iterator Node<N, E>::edgeEnd() {
-        return this->_outgoing.end();
+    bool Node<N, E>::addEdge(const std::weak_ptr<N> &dst, const E &wgt){
+        auto found =
+            this->findEdge(*(dst.lock()), wgt) == this->_outgoing.end();
+        if(found) {
+            Edge<N, E> new_edge{dst, wgt};
+            this->_outgoing.push_back(new_edge);
+        }
+        return found;
     }
     // Delete an edge from the current node
     template <typename N, typename E>
@@ -187,13 +202,11 @@ namespace gdwg {
     // Invalidate edges
     template <typename N, typename E>
     void Node<N, E>::invalidateEdges() {
-        // std::cout << "before size is: " << this->_outgoing.size() << "\n";
         this->_outgoing.remove_if(
             [] (auto &i) {
                 return i.getDest().expired();
             }
         );
-        // std::cout << "after size is: " << this->_outgoing.size() << "\n";
     }
     // Get all edges
     template <typename N, typename E>
@@ -203,6 +216,9 @@ namespace gdwg {
     //////////////////////////
     // Edge class functions //
     //////////////////////////
+    template <typename N, typename E>
+    Edge<N, E>::Edge(std::weak_ptr<N> dest, E weight) :
+    _dest{dest}, _weight{weight} {};
     // < Comparator for edges
     template <typename N, typename E>
     bool operator<(const Edge<N, E> &lhs, const Edge<N, E> &rhs) {
@@ -235,10 +251,12 @@ namespace gdwg {
     void Edge<N, E>::setDest(std::weak_ptr<N> &dest) {
         this->_dest = dest;
     }
-
+    // Assignment for edge
     template <typename N, typename E>
-    void Edge<N, E>::setWeight(E &weight) {
-        this->_weight = weight;
+    Edge<N, E> &Edge<N, E>::operator=(const Edge<N, E> &rhs) {
+        this->_dest = rhs._dest;
+        this->_weight = rhs._weight;
+        return *this;
     }
 
     ///////////////////////////
@@ -268,12 +286,7 @@ namespace gdwg {
         if(found){
             throw std::runtime_error("Source or Destination not in Graph.\n");
         }
-        auto e_res   = (*s_res).findEdge(dest, weight);
-        found = (e_res == (*s_res).edgeEnd());
-        if(found){
-            (*s_res).addEdge((*d_res).getNode(), weight);
-        }
-        return found;
+        return (*s_res).addEdge((*d_res).getNode(), weight);
     }
     // Checks if a node exists in graph
     template <typename N, typename E>
@@ -400,6 +413,7 @@ namespace gdwg {
     template <typename N, typename E>
     Graph<N, E>::Graph(const Graph<N, E> &source) : Graph() {
         std::list<std::tuple<N, N, E>> all_edges;
+        // Get deep copy of all edges
         for (auto &i : source._nodes) {
             auto n_val = *(i.getNode().lock());
             auto n_edges = i.getEdges();
@@ -410,7 +424,7 @@ namespace gdwg {
                 all_edges.push_back(std::make_tuple(n_val, d_val, w_val));
             }
         }
-
+        // Reinsert edges
         for (auto &i : all_edges) {
             auto src = std::get<0>(i), dest = std::get<1>(i);
             auto weight = std::get<2>(i);

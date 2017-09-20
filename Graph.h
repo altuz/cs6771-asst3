@@ -436,14 +436,17 @@ namespace gdwg {
     void Graph<N, E>::begin() const {
         this->_fake_iter = this->_nodes.cbegin();
     }
+    // Move iterator
     template <typename N, typename E>
     void Graph<N, E>::next() const {
         this->_fake_iter++;
     }
+    // Check if iterator is at end of list
     template <typename N, typename E>
     bool Graph<N, E>::end() const {
         return (this->_fake_iter == this->_nodes.cend());
     }
+    // Get value at iterator
     template <typename N, typename E>
     const N &Graph<N, E>::value() const {
         return *(*this->_fake_iter).getNode().lock();

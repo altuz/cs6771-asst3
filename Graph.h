@@ -39,8 +39,8 @@ namespace gdwg {
             this->_node = std::make_shared<N>(node);
         };
         Node() = default;
-        Node(const Node &cpy) = default;
-        Node(Node &&target) = default;
+        Node(const Node<N, E> &cpy) = default;
+        Node(Node<N, E> &&target) = default;
         int getDegree() const;
         std::weak_ptr<N> getNode() const;
         bool isConnected(const N &dst) const;
@@ -49,6 +49,8 @@ namespace gdwg {
         void deleteEdge(const N &dest, const E &weight) noexcept;
         void mergeReplace(const N &old, std::weak_ptr<N> &replacement);
         void merge(const Node<N, E> &old);
+        void invalidateEdges();
+        std::list<Edge<N, E>> getEdges() const;
 
         Node<N, E> &operator=(const Node<N, E> &rhs){
             this->_node = rhs._node;
@@ -69,11 +71,12 @@ namespace gdwg {
         typename std::list<Node<N, E>>::iterator findNode(const N &val);
         typename std::list<Node<N, E>>::const_iterator findNode(const N &val) const;
     public:
-
         Graph() = default;
-        Graph(const Graph &source) = default;
-        Graph(Graph &&source) = default;
+        Graph(const Graph<N, E> &source);
+        Graph(Graph<N, E> &&source) = default;
 
+        Graph<N, E> &operator=(const Graph<N, E> &rhs);
+        Graph<N, E> &operator=(Graph<N, E> &&rhs);
         bool addNode(const N &val);
         bool addEdge(const N &src, const N &dest, const E &weight);
         bool replace(const N &old, const N &replacement);
@@ -175,6 +178,22 @@ namespace gdwg {
         this->_outgoing.insert(this->_outgoing.end(), old._outgoing.begin(), old._outgoing.end());
         this->_outgoing.sort();
         this->_outgoing.unique();
+    }
+    // Invalidate edges
+    template <typename N, typename E>
+    void Node<N, E>::invalidateEdges() {
+        // std::cout << "before size is: " << this->_outgoing.size() << "\n";
+        this->_outgoing.remove_if(
+            [] (auto &i) {
+                return i.getDest().expired();
+            }
+        );
+        // std::cout << "after size is: " << this->_outgoing.size() << "\n";
+    }
+    // Get all edges
+    template <typename N, typename E>
+    std::list<Edge<N, E>> Node<N, E>::getEdges() const {
+        return this->_outgoing;
     }
     //////////////////////////
     // Edge class functions //
@@ -354,6 +373,8 @@ namespace gdwg {
             return;
         this->_nodes.erase(res);
         // TODO: check for invalid edges during printing
+        for (auto &i : this->_nodes)
+            i.invalidateEdges();
     }
     // Delete an edge
     template <typename N, typename E>
@@ -369,6 +390,41 @@ namespace gdwg {
     template <typename N, typename E>
     void Graph<N, E>::clear() noexcept {
         this->_nodes.erase(this->_nodes.begin(), this->_nodes.end());
+    }
+    // Copy constructor for graph
+    template <typename N, typename E>
+    Graph<N, E>::Graph(const Graph<N, E> &source) : Graph() {
+        std::list<std::tuple<N, N, E>> all_edges;
+        for (auto &i : source._nodes) {
+            auto n_val = *(i.getNode().lock());
+            auto n_edges = i.getEdges();
+            this->addNode(n_val);
+            for (auto &j : n_edges) {
+                auto d_val = *(j.getDest().lock());
+                auto w_val = j.getWeight();
+                all_edges.push_back(std::make_tuple(n_val, d_val, w_val));
+            }
+        }
+
+        for (auto &i : all_edges) {
+            auto src = std::get<0>(i), dest = std::get<1>(i);
+            auto weight = std::get<2>(i);
+            this->addEdge(src, dest, weight);
+        }
+    }
+    // Copy assignment
+    template <typename N, typename E>
+    Graph<N, E> &Graph<N, E>::operator=(const Graph<N, E> &rhs) {
+        Graph<N, E> cpy{rhs};
+        std::swap(this->_nodes, cpy._nodes);
+        return *this;
+    }
+    // Move assignment
+    template <typename N, typename E>
+    Graph<N, E> &Graph<N, E>::operator=(Graph<N, E> &&rhs) {
+        Graph<N, E> cpy{std::move(rhs)};
+        std::swap(this->_nodes, cpy._nodes);
+        return *this;
     }
 }
 #endif

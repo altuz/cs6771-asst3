@@ -67,6 +67,7 @@ namespace gdwg {
         // members
     private:
         std::list<Node<N, E>> _nodes;
+        mutable typename std::list<Node<N, E>>::const_iterator _fake_iter;
 
         typename std::list<Node<N, E>>::iterator findNode(const N &val);
         typename std::list<Node<N, E>>::const_iterator findNode(const N &val) const;
@@ -88,6 +89,10 @@ namespace gdwg {
         bool isConnected(const N &src, const N &dest) const;
         void printNodes() const;
         void printEdges(const N& val) const;
+        void begin() const;
+        void next() const;
+        bool end() const;
+        const N &value() const;
     };
     //////////////////////////
     // Node class functions //
@@ -425,6 +430,23 @@ namespace gdwg {
         Graph<N, E> cpy{std::move(rhs)};
         std::swap(this->_nodes, cpy._nodes);
         return *this;
+    }
+    // Start of iterator
+    template <typename N, typename E>
+    void Graph<N, E>::begin() const {
+        this->_fake_iter = this->_nodes.cbegin();
+    }
+    template <typename N, typename E>
+    void Graph<N, E>::next() const {
+        this->_fake_iter++;
+    }
+    template <typename N, typename E>
+    bool Graph<N, E>::end() const {
+        return (this->_fake_iter == this->_nodes.cend());
+    }
+    template <typename N, typename E>
+    const N &Graph<N, E>::value() const {
+        return *(*this->_fake_iter).getNode().lock();
     }
 }
 #endif
